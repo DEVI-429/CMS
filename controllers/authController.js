@@ -9,8 +9,7 @@ exports.register = async (req, res) => {
         if (existingUser) {
             return res.status(400).json({ message: 'User Already Exists!' });
         }
-        const hashedPassword = await bcrypt.hash(password, 10);
-        const newUser = new User({ username, email, password: hashedPassword });
+        const newUser = new User({ username, email, password }); 
         await newUser.save();
 
         const token = jwt.sign({ _id: newUser._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
@@ -25,13 +24,15 @@ exports.login = async (req, res) => {
     const { email, password } = req.body;
     try {
         const user = await User.findOne({ email });
-        if (!user || !(await user.comparePassword(password))) {
-        return res.status(400).json({ message: 'Invalid credentials!' });
+        if (!user) {
+            return res.status(400).json({ message: 'Invalid credentials!' });
         }
-        const validPass = await bcrypt.compare(password, user.password);
+
+        const validPass = user.comparePassword(password);
         if (!validPass) {
-            return res.status(400).json({ message: 'Invalid credentials1' });
+            return res.status(400).json({ message: 'Invalid credentials!' });
         }
+
         const token = jwt.sign({ _id: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
         res.cookie('token', token, { httpOnly: true });
         res.json({ message: 'Login successful' });
